@@ -1,0 +1,194 @@
+<section class="trips-page">
+  <form action="/trips" method="GET">
+    <div class="trips-search-panel">
+      <div class="container">
+        <div class="trips-search-panel__card">
+          <div class="trips-search-panel__top">
+          <label class="trips-search-panel__mode trips-search-panel__mode--active">
+            <input type="radio" name="tripTipo" value="I" <%= !filters.tripTipo || filters.tripTipo === 'I' ? 'checked' : '' %>>
+            <span>Somente ida</span>
+          </label>
+
+          <label class="trips-search-panel__mode">
+            <input type="radio" name="tripTipo" value="IV" <%= filters.tripTipo === 'IV' ? 'checked' : '' %>>
+            <span>Ida e volta</span>
+          </label>
+        </div>
+
+          <div class="trips-search-panel__grid">
+          <label class="trips-search-panel__field">
+            <span>Origem</span>
+            <div class="trips-search-panel__control">
+              <i class="fa-solid fa-location-crosshairs"></i>
+              <select name="cidadeOrigem" aria-label="Origem">
+                <option value="">De onde você vai sair?</option>
+                <% cities.forEach(city=> { %>
+                  <option value="<%= city.id %>" <%= String(filters.cidadeOrigem || '') === String(city.id) ? 'selected' : '' %>>
+                    <%= city.nome %> - <%= city.uf %>
+                  </option>
+                <% }) %>
+              </select>
+            </div>
+          </label>
+
+          <button class="trips-search-panel__swap" type="button" aria-label="Trocar origem e destino">
+            <i class="fa-solid fa-right-left"></i>
+          </button>
+
+          <label class="trips-search-panel__field">
+            <span>Destino</span>
+            <div class="trips-search-panel__control">
+              <i class="fa-solid fa-location-dot"></i>
+              <select name="cidadeDestino" aria-label="Destino">
+                <option value="">Para onde você vai?</option>
+                <% cities.forEach(city=> { %>
+                  <option value="<%= city.id %>" <%= String(filters.cidadeDestino || '') === String(city.id) ? 'selected' : '' %>>
+                    <%= city.nome %> - <%= city.uf %>
+                  </option>
+                <% }) %>
+              </select>
+            </div>
+          </label>
+
+          <label class="trips-search-panel__field">
+            <span>Data da ida</span>
+            <div class="trips-search-panel__control">
+              <input type="date" name="dataIda" value="<%= filters.dataIda || '' %>" aria-label="Data da ida">
+            </div>
+          </label>
+
+          <label class="trips-search-panel__field">
+            <span>Data da volta</span>
+            <div class="trips-search-panel__control trips-search-panel__control--muted">
+              <input type="date" name="dataVolta" value="<%= filters.dataVolta || '' %>" aria-label="Data da volta">
+            </div>
+          </label>
+
+            <button class="trips-search-panel__cta" type="submit">Pesquisar viagens</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <section class="trips-results">
+      <div class="container trips-results__wrap">
+        <aside class="trips-filters">
+        <div class="trips-filters__header">
+          <h2>Filtrar viagens</h2>
+        </div>
+
+        <div class="trips-filters__group">
+          <h3>Saída</h3>
+          <label>
+            <input type="checkbox" name="horariosSaida" value="manha"
+              <%= (filters.horariosSaida || []).includes('manha') ? 'checked' : '' %> onchange="this.form.submit()">
+            Manhã (06h00 - 11h59)
+          </label>
+          <label>
+            <input type="checkbox" name="horariosSaida" value="tarde"
+              <%= (filters.horariosSaida || []).includes('tarde') ? 'checked' : '' %> onchange="this.form.submit()">
+            Tarde (12h00 - 17h59)
+          </label>
+          <label>
+            <input type="checkbox" name="horariosSaida" value="noite"
+              <%= (filters.horariosSaida || []).includes('noite') ? 'checked' : '' %> onchange="this.form.submit()">
+            Noite (18h00 - 23h59)
+          </label>
+          <label>
+            <input type="checkbox" name="horariosSaida" value="madrugada"
+              <%= (filters.horariosSaida || []).includes('madrugada') ? 'checked' : '' %> onchange="this.form.submit()">
+            Madrugada (00h00 - 05h59)
+          </label>
+        </div>
+        </aside>
+
+        <div class="trips-results__content">
+        <div class="trips-steps">
+          <div class="trips-steps__item trips-steps__item--active">
+            <i class="fa-solid fa-arrow-right"></i>
+            <span>Selecionar poltronas</span>
+          </div>
+          <div class="trips-steps__item">
+            <i class="fa-regular fa-credit-card"></i>
+            <span>Reserva</span>
+          </div>
+          <div class="trips-steps__item">
+            <i class="fa-solid fa-check"></i>
+            <span>Finalizado</span>
+          </div>
+        </div>
+
+        <div class="trips-toolbar">
+          <span class="trips-toolbar__label">Ordenar por</span>
+          <div class="trips-toolbar__sorts">
+            <button type="button" class="trips-toolbar__sort trips-toolbar__sort--active">Mais cedo</button>
+            <button type="button" class="trips-toolbar__sort">Menor preço</button>
+            <button type="button" class="trips-toolbar__sort trips-toolbar__sort--more">
+              Mais opções <i class="fa-solid fa-chevron-down"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="trips-results__list">
+          <% if (trips && trips.length) { %>
+            <% trips.forEach(trip=> { %>
+              <% const basePrice = Number(trip.valor || 0); %>
+              <% const discountPrice = trip.discount ? basePrice * (1 - (trip.discount / 100)) : basePrice; %>
+              <article class="trip-result-card">
+                <div class="trip-result-card__info">
+                  <div class="trip-result-card__meta">
+                    <!-- <span>Categoria: <strong>Executivo</strong></span> -->
+                    <span>Conexão: <strong>Direto</strong></span>
+                    <span>Duração: <strong><%= durationFormat(trip.duracao) %></strong></span>
+                  </div>
+
+                  <div class="trip-result-card__route">
+                    <div class="trip-result-card__place">
+                      <span>Saída <%= dateFormatDayMonth(trip.dtHoraSaida) %></span>
+                      <strong><%= timeFormat(trip.dtHoraSaida) %></strong>
+                      <small><%= trip.route.cidadeOrigem.nome %> - <%= trip.route.cidadeOrigem.uf %></small>
+                    </div>
+
+                    <div class="trip-result-card__path">
+                      <i class="fa-solid fa-route"></i>
+                    </div>
+
+                    <div class="trip-result-card__place trip-result-card__place--arrival">
+                      <span>Chegada <%= dateFormatDayMonth(calculateDateForDuration(trip.dtHoraSaida, trip.duracao)) %></span>
+                      <strong><%= timeFormat(calculateDateForDuration(trip.dtHoraSaida, trip.duracao)) %></strong>
+                      <small><%= trip.route.cidadeDestino.nome %> - <%= trip.route.cidadeDestino.uf %></small>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="trip-result-card__prices">
+                  <div class="trip-price-option trip-price-option--selected">
+                    <span class="trip-price-option__label">A partir de</span>
+                    <strong><%= currencyFormat(basePrice) %></strong>
+                    <span class="trip-price-option__small">PIX:</span>
+                    <strong class="trip-price-option__highlight"><%= currencyFormat(basePrice) %></strong>
+                  </div>
+
+                  <div class="trip-price-option">
+                    <span class="trip-price-option__label">Com desconto</span>
+                    <strong><%= trip.discount ? `${trip.discount}% OFF` : 'Sem desconto' %></strong>
+                    <span class="trip-price-option__small">PIX:</span>
+                    <strong class="trip-price-option__highlight"><%= currencyFormat(discountPrice) %></strong>
+                  </div>
+
+                  <a href="/trips/<%= trip.id %>" class="trip-result-card__btn">Selecionar</a>
+                </div>
+              </article>
+            <% }) %>
+          <% } else { %>
+            <div class="trips-results__empty">
+              <h3>Nenhuma viagem encontrada.</h3>
+              <p>Altere os filtros acima e tente novamente.</p>
+            </div>
+          <% } %>
+        </div>
+        </div>
+      </div>
+    </section>
+  </form>
+</section>

@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Eucator Passagens</title>
+
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <link href="css/tiny-slider.css" rel="stylesheet">
+    <link href="css/style.css" rel="stylesheet">
+
+    <style>
+        .custom-navbar {
+            background-color: #ffffff !important;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+        }
+        .custom-navbar .navbar-brand img {
+            height: 40px;
+            width: auto;
+            display: block;
+        }
+
+    </style>
+
+</head>
+
+<body>
+    <!-- Preloader start -->
+    <!-- include('partials/preloader')  %> -->
+    <!-- Preloader end -->
+
+    <!-- Start Header/Navigation -->
+    <nav class="custom-navbar navbar navbar navbar-expand-md navbar-dark bg-dark" arial-label="Furni navigation bar">
+
+        <div class="container">
+            <a class="navbar-brand" href="/"><img src="/images/logo.png" alt=""></a>
+
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarsFurni" aria-controls="navbarsFurni" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="navbarsFurni">
+                <ul class="custom-navbar-nav navbar-nav ms-auto mb-2 mb-md-0">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/trips">Viagens</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/ofertas">Ofertas</a>
+                    </li>
+                </ul>
+
+                <ul class="custom-navbar-cta navbar-nav mb-2 mb-md-0 ms-5">
+                    <li><a class="nav-link" href="#"><img src="images/user.svg"></a></li>
+                    <li><a class="nav-link" href="cart.html"><img src="images/cart.svg"></a></li>
+                </ul>
+            </div>
+        </div>
+            
+    </nav>
+    <!-- End Header/Navigation -->
+
+    <%- body %>
+
+    <script src="js/bootstrap.bundle.min.js"></script>
+    <script src="js/tiny-slider.js"></script>
+    <script src="js/custom.js"></script>
+    <script src="js/components/carrossel-trip.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const tripTypeRadios = document.querySelectorAll('input[name="tripTipo"]');
+            const returnDateInput = document.querySelector('input[name="dataVolta"]');
+
+            function toggleReturnDate() {
+                const selectedType = document.querySelector('input[name="tripTipo"]:checked').value;
+                if (selectedType === 'IV') {
+                    returnDateInput.disabled = false;
+                } else {
+                    returnDateInput.disabled = true;
+                    returnDateInput.value = '';
+                }
+            }
+
+            tripTypeRadios.forEach(radio => {
+                radio.addEventListener('change', toggleReturnDate);
+            });
+
+            // Initialize the state on page load
+            toggleReturnDate();
+        });
+    </script>
+
+</body>
+
+</html>

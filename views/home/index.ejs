@@ -1,0 +1,198 @@
+
+<% const filters = { cidadeOrigem: undefined, cidadeDestino: undefined, dataIda: undefined, dataVolta: undefined, tripTipo: undefined }; %>
+<section class="trips-hero">
+    <div class="container trips-hero__wrap">
+        <form class="trips-hero__card" action="/trips" method="GET">
+            <h3 class="trips-hero__card-title">Viaje com a gente!</h3>
+
+            <div class="trips-field">
+              <span class="trips-field__icon"><i class="fa-solid fa-location-crosshairs"></i></span>
+              <select
+                name="cidadeOrigem"
+                aria-label="Origem"
+              >
+                <option value="">De onde você vai sair?</option>
+                <% cities.forEach(city => { %>
+                  <option value="<%= city.id %>" <%= String(filters.cidadeOrigem || '') === String(city.id) ? 'selected' : '' %>>
+                    <%= city.nome %> - <%= city.uf %>
+                  </option>
+                <% }) %>
+              </select>
+            </div>
+
+            <div class="trips-field trips-field--swap">
+              <span class="trips-field__icon"><i class="fa-solid fa-location-dot"></i></span>
+               <select
+                name="cidadeDestino"
+                aria-label="Destino"
+              >
+                <option value="">Para onde você vai?</option>
+                <% cities.forEach(city => { %>
+                  <option value="<%= city.id %>" <%= String(filters.cidadeDestino || '') === String(city.id) ? 'selected' : '' %>>
+                    <%= city.nome %> - <%= city.uf %>
+                  </option>
+                <% }) %>
+              </select>
+            </div>
+
+            <div class="trips-options">
+                <label>
+                  <input type="radio" name="tripTipo" value="I"
+                    <%= !filters.tripTipo || filters.tripTipo === 'I' ? 'checked' : '' %>>
+                  Somente ida
+                </label>
+
+                <label>
+                  <input type="radio" name="tripTipo" value="IV"
+                    <%= filters.tripTipo === 'IV' ? 'checked' : '' %>>
+                  Ida e volta
+                </label>
+            </div>
+
+            <div class="trips-dates">
+                <label>
+                    <span>Data da ida</span>
+                    <input type="date" name="dataIda" 
+                    value="<%= filters.dataIda || '' %>"
+                    aria-label="Data da ida">
+                </label>
+                <label>
+                    <span>Data da volta</span>
+                    <input type="date" name="dataVolta" 
+                    value="<%= filters.dataVolta || '' %>"
+                    aria-label="Data da volta">
+                </label>
+                <!-- <label>
+                    <span>Data da volta</span>
+                    <input type="date" aria-label="Data da volta">
+                </label> -->
+            </div>
+
+            <div class="trips-checks">
+                <!-- <label><input type="checkbox"> Inserir cupom</label>
+                <label><input type="checkbox"> Comprar com pontos</label> -->
+            </div>
+
+            <button class="trips-cta" type="submit">Pesquisar viagens</button>
+        </form>
+
+        <div class="trips-hero__content">
+
+        </div>
+
+        <div class="trips-hero__image">
+        </div>
+    </div>
+</section>
+
+<section class="container trips-list">
+  <h2 class="trips-list__title">As melhores ofertas para você</h2>
+
+  <div class="trips-list__carousel-wrapper">
+    <button class="trips-list__arrow trips-list__arrow--prev" onclick="slideCarousel(-1)">&#8249;</button>
+
+    <div class="trips-list__track-container">
+      <ul class="trips-list__track" id="tripsTrack">
+        <% if (trips && trips.length) { %>
+          <% trips.forEach(trip => { %>
+            <li class="trips-list__card">
+              <div class="trips-list__card-bg" style="background-image: url('<%= trip.urlImagem || '/img/default-city.jpg' %>')"></div>
+              <div class="trips-list__card-overlay"></div>
+              <div class="trips-list__card-content">
+                <p class="trips-list__card-origin">De <strong><%= trip.route.cidadeOrigem.nome %> - <%= trip.route.cidadeOrigem.uf %></strong></p>
+                <p class="trips-list__card-destination">Para <strong><%= trip.route.cidadeDestino.nome %> - <%= trip.route.cidadeDestino.uf %></strong></p>
+                <p class="trips-list__card-from">Por apenas</p>
+                <p class="trips-list__card-price"><%= currencyFormat(trip.valor) %></p>
+                <% if (trip.discount) { %>
+                  <span class="trips-list__card-badge"><%= trip.discount %>% OFF</span>
+                <% } %>
+                <a href="/trips/<%= trip.id %>" class="trips-list__card-cta">Comprar</a>
+              </div>
+            </li>
+          <% }) %>
+        <% } else { %>
+          <p class="trips-list__empty">Nenhuma viagem encontrada.</p>
+        <% } %>
+      </ul>
+    </div>
+
+    <button class="trips-list__arrow trips-list__arrow--next" onclick="slideCarousel(1)">&#8250;</button>
+  </div>
+
+  <div class="trips-list__footer">
+    <a href="/ofertas" class="trips-list__more-btn">Conferir mais ofertas</a>
+  </div>
+</section>
+
+<footer class="site-footer">
+  <div class="site-footer__newsletter">
+    <div class="container site-footer__newsletter-wrap">
+      <div class="site-footer__newsletter-text">
+        <h3>Receba ofertas no seu e-mail</h3>
+        <p>Descontos exclusivos para planejar sua próxima viagem.</p>
+      </div>
+
+      <form class="site-footer__newsletter-form" action="/newsletter" method="post">
+        <input type="text" name="nome" placeholder="Nome" aria-label="Nome">
+        <input type="email" name="email" placeholder="E-mail" aria-label="E-mail">
+        <button type="submit">Quero receber ofertas</button>
+      </form>
+
+      <p class="site-footer__newsletter-note">
+        Ao assinar você concorda em receber e-mails promocionais. Veja a
+        <a href="/privacidade">política de privacidade</a>.
+      </p>
+    </div>
+  </div>
+
+  <div class="site-footer__main">
+    <div class="container site-footer__columns">
+      <div class="site-footer__col site-footer__col--brand">
+        <img src="/images/logo.png" alt="Eucator" class="site-footer__logo">
+      </div>
+
+      <div class="site-footer__col">
+        <h4>Serviços</h4>
+        <ul>
+          <li><a href="/bilhetes">Imprimir bilhete</a></li>
+          <li><a href="/espaco-mulher">Espaco Mulher</a></li>
+          <li><a href="/espaco-pet">Espaco Pet</a></li>
+        </ul>
+      </div>
+
+      <div class="site-footer__col">
+        <h4>Ajuda</h4>
+        <ul>
+          <li><a href="/faq">Perguntas frequentes (FAQ)</a></li>
+          <li><a href="/contato">Fale conosco</a></li>
+          <li><a href="/termos">Termos de uso</a></li>
+          <li><a href="/privacidade">Politica de privacidade</a></li>
+        </ul>
+      </div>
+
+      <div class="site-footer__col">
+        <h4>Contatos</h4>
+        <ul class="site-footer__contacts">
+          <li><i class="fa-solid fa-headset"></i> SAC 0000 000 000</li>
+          <li><i class="fa-brands fa-whatsapp"></i> WhatsApp 24h</li>
+        </ul>
+        <div class="site-footer__social">
+          <a href="#" aria-label="Youtube"><i class="fa-brands fa-youtube"></i></a>
+          <a href="#" aria-label="Facebook"><i class="fa-brands fa-facebook-f"></i></a>
+          <a href="#" aria-label="Instagram"><i class="fa-brands fa-instagram"></i></a>
+          <a href="#" aria-label="TikTok"><i class="fa-brands fa-tiktok"></i></a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="site-footer__bottom">
+    <div class="container site-footer__bottom-wrap">
+      <div class="site-footer__brandline">
+        <img src="/images/logo.png" alt="Eucator" class="site-footer__logo-small">
+        <span>&copy; 2026 Eucator. Todos os direitos reservados.</span>
+      </div>
+    </div>
+  </div>
+</footer>
+
