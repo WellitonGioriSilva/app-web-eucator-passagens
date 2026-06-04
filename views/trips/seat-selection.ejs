@@ -1,0 +1,418 @@
+<section class="seat-selection-page" data-trip-id="<%= trip.id %>">
+  <div class="container">
+    <div class="seat-selection__header">
+      <div>
+        <p class="seat-selection__subtitle">Escolha sua poltrona</p>
+        <h1 class="seat-selection__title">
+          <%= trip.route.cidadeOrigem.nome %> - <%= trip.route.cidadeOrigem.uf %>
+          <span>para</span>
+          <%= trip.route.cidadeDestino.nome %> - <%= trip.route.cidadeDestino.uf %>
+        </h1>
+        <p class="seat-selection__meta">
+          Saida <strong><%= timeFormat(trip.dtHoraSaida) %></strong>
+          em <strong><%= dateFormatDayMonth(trip.dtHoraSaida) %></strong>
+        </p>
+      </div>
+      <div class="seat-selection__price">
+        <span>Valor por poltrona</span>
+        <strong><%= currencyFormat(basePrice) %></strong>
+      </div>
+    </div>
+
+    <div class="seat-selection__content">
+      <div class="seat-selection__bus">
+        <div class="seat-selection__bus-head">
+          <span class="seat-selection__wheel">
+            <i class="fa-solid fa-bus"></i>
+          </span>
+          <span class="seat-selection__bus-label">Frente do onibus</span>
+        </div>
+
+        <div class="seat-selection__grid">
+          <% seatLayout.forEach((row) => { %>
+            <div class="seat-selection__row">
+              <% row.forEach((cell) => { %>
+                <% if (cell.type === 'seat') { %>
+                  <button
+                    type="button"
+                    class="seat-selection__seat <%= cell.status === 'unavailable' ? 'seat-selection__seat--unavailable' : '' %> <%= cell.status === 'mine' ? 'seat-selection__seat--selected' : '' %>"
+                    data-seat="<%= cell.number %>"
+                    data-status="<%= cell.status %>"
+                    data-expires-at="<%= cell.expiresAt || '' %>">
+                    <span><%= cell.number %></span>
+                  </button>
+                <% } else if (cell.type === 'aisle') { %>
+                  <div class="seat-selection__aisle">corredor</div>
+                <% } else { %>
+                  <div class="seat-selection__slot"></div>
+                <% } %>
+              <% }) %>
+            </div>
+          <% }) %>
+        </div>
+
+        <div class="seat-selection__legend">
+          <span class="seat-selection__legend-item">
+            <span class="seat-selection__legend-box"></span>
+            Disponivel
+          </span>
+          <span class="seat-selection__legend-item">
+            <span class="seat-selection__legend-box seat-selection__legend-box--selected"></span>
+            Selecionada
+          </span>
+          <span class="seat-selection__legend-item">
+            <span class="seat-selection__legend-box seat-selection__legend-box--unavailable"></span>
+            Indisponivel
+          </span>
+        </div>
+      </div>
+
+      <aside class="seat-selection__summary">
+        <h2>Poltronas selecionadas</h2>
+        <ul class="seat-selection__list" id="selectedSeatsList">
+          <li class="seat-selection__empty">Nenhuma poltrona selecionada.</li>
+        </ul>
+
+        <div class="seat-selection__total">
+          <span>Total</span>
+          <strong id="totalValue"><%= currencyFormat(0) %></strong>
+        </div>
+
+        <button type="button" class="seat-selection__checkout" id="checkoutButton" disabled>
+          Finalizar compra
+          <span id="checkoutValue"><%= currencyFormat(0) %></span>
+        </button>
+        <p class="seat-selection__hint" id="checkoutMessage"></p>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<div class="pix-modal" id="pixModal" aria-hidden="true">
+  <div class="pix-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="pixModalTitle">
+    <div class="pix-modal__header">
+      <div>
+        <p class="pix-modal__subtitle">Pagamento PIX</p>
+        <h2 id="pixModalTitle">Finalize sua compra</h2>
+      </div>
+      <button type="button" class="pix-modal__close" id="pixCloseButton" aria-label="Fechar pagamento">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <div class="pix-modal__body">
+      <div class="pix-modal__qr">
+        <img id="pixQrCode" alt="QR Code PIX">
+      </div>
+
+      <div class="pix-modal__details">
+        <span>Registro do pagamento</span>
+        <strong id="pixPaymentId">#</strong>
+        <span>Registro da venda</span>
+        <strong id="pixSaleId">#</strong>
+        <span>Valor</span>
+        <strong id="pixAmount">R$ 0,00</strong>
+      </div>
+    </div>
+
+    <label class="pix-modal__copy">
+      <span>PIX copia e cola</span>
+      <textarea id="pixPayload" readonly></textarea>
+    </label>
+
+    <p class="pix-modal__status" id="pixStatus">Aguardando confirmacao do pagamento...</p>
+  </div>
+</div>
+
+<script>
+  (function () {
+    const basePrice = <%- JSON.stringify(basePrice) %>;
+    const formatter = new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+    });
+
+    const selectedSeats = new Set();
+    const tripId = document.querySelector('.seat-selection-page').getAttribute('data-trip-id');
+    const list = document.getElementById('selectedSeatsList');
+    const totalValue = document.getElementById('totalValue');
+    const checkoutValue = document.getElementById('checkoutValue');
+    const checkoutButton = document.getElementById('checkoutButton');
+    const checkoutMessage = document.getElementById('checkoutMessage');
+    const pixModal = document.getElementById('pixModal');
+    const pixCloseButton = document.getElementById('pixCloseButton');
+    const pixQrCode = document.getElementById('pixQrCode');
+    const pixPaymentId = document.getElementById('pixPaymentId');
+    const pixSaleId = document.getElementById('pixSaleId');
+    const pixAmount = document.getElementById('pixAmount');
+    const pixPayload = document.getElementById('pixPayload');
+    const pixStatus = document.getElementById('pixStatus');
+    let paymentEvents = null;
+    let paymentStatusPoll = null;
+    const reservationTimers = new Map();
+    const pendingReservations = new Set();
+
+    function updateSummary() {
+      list.innerHTML = '';
+
+      if (selectedSeats.size === 0) {
+        const emptyItem = document.createElement('li');
+        emptyItem.className = 'seat-selection__empty';
+        emptyItem.textContent = 'Nenhuma poltrona selecionada.';
+        list.appendChild(emptyItem);
+      } else {
+        Array.from(selectedSeats)
+          .sort((a, b) => a - b)
+          .forEach((seatNumber) => {
+            const item = document.createElement('li');
+            item.className = 'seat-selection__list-item';
+            item.textContent = `Poltrona ${seatNumber}`;
+
+            list.appendChild(item);
+          });
+      }
+
+      const total = basePrice * selectedSeats.size;
+      const formatted = formatter.format(total);
+      totalValue.textContent = formatted;
+      checkoutValue.textContent = formatted;
+      checkoutButton.disabled = selectedSeats.size === 0;
+    }
+
+    function markSeatUnavailable(seatNumber) {
+      const seatButton = document.querySelector(`.seat-selection__seat[data-seat="${seatNumber}"]`);
+      if (!seatButton) return;
+      if (selectedSeats.has(Number(seatNumber)) || pendingReservations.has(Number(seatNumber))) return;
+
+      selectedSeats.delete(Number(seatNumber));
+      seatButton.classList.remove('seat-selection__seat--selected');
+      seatButton.classList.add('seat-selection__seat--unavailable');
+      seatButton.setAttribute('data-status', 'unavailable');
+      seatButton.disabled = true;
+      updateSummary();
+    }
+
+    function markSeatSold(seatNumber) {
+      const seatButton = document.querySelector(`.seat-selection__seat[data-seat="${seatNumber}"]`);
+      if (!seatButton) return;
+
+      selectedSeats.delete(Number(seatNumber));
+      clearReservationTimer(seatNumber);
+      seatButton.classList.remove('seat-selection__seat--selected');
+      seatButton.classList.add('seat-selection__seat--unavailable');
+      seatButton.setAttribute('data-status', 'unavailable');
+      seatButton.disabled = true;
+      updateSummary();
+    }
+
+    function markSeatAvailable(seatNumber) {
+      const seatButton = document.querySelector(`.seat-selection__seat[data-seat="${seatNumber}"]`);
+      if (!seatButton) return;
+
+      seatButton.classList.remove('seat-selection__seat--unavailable');
+      seatButton.setAttribute('data-status', 'available');
+      seatButton.disabled = false;
+      updateSummary();
+    }
+
+    function clearReservationTimer(seatNumber) {
+      const timer = reservationTimers.get(Number(seatNumber));
+      if (timer) {
+        clearTimeout(timer);
+        reservationTimers.delete(Number(seatNumber));
+      }
+    }
+
+    function scheduleReservationExpiration(seatNumber, expiresAt) {
+      clearReservationTimer(seatNumber);
+      const delay = Math.max(new Date(expiresAt).getTime() - Date.now(), 0);
+      const timer = setTimeout(() => {
+        const seatButton = document.querySelector(`.seat-selection__seat[data-seat="${seatNumber}"]`);
+        selectedSeats.delete(Number(seatNumber));
+        seatButton?.classList.remove('seat-selection__seat--selected');
+        seatButton?.setAttribute('data-status', 'available');
+        checkoutMessage.textContent = `Reserva da poltrona ${seatNumber} expirada.`;
+        updateSummary();
+        clearReservationTimer(seatNumber);
+      }, delay);
+      reservationTimers.set(Number(seatNumber), timer);
+    }
+
+    function openPixModal(payment) {
+      pixPaymentId.textContent = `#${payment.paymentId}`;
+      pixSaleId.textContent = `#${payment.saleId}`;
+      pixAmount.textContent = formatter.format(Number(payment.amount || 0));
+      pixPayload.value = payment.pixCopiaCola || '';
+      pixQrCode.src = `https://api.qrserver.com/v1/create-qr-code/?size=190x190&data=${encodeURIComponent(payment.pixCopiaCola || '')}`;
+      pixStatus.textContent = 'Aguardando confirmacao do pagamento...';
+      pixModal.classList.add('pix-modal--open');
+      pixModal.setAttribute('aria-hidden', 'false');
+      subscribePayment(payment.paymentId);
+    }
+
+    function closePixModal() {
+      pixModal.classList.remove('pix-modal--open');
+      pixModal.setAttribute('aria-hidden', 'true');
+      if (paymentEvents) {
+        paymentEvents.close();
+        paymentEvents = null;
+      }
+      if (paymentStatusPoll) {
+        clearInterval(paymentStatusPoll);
+        paymentStatusPoll = null;
+      }
+    }
+
+    function handlePaymentStatus(status) {
+      pixStatus.textContent = `Status do pagamento: ${status}`;
+      if (status === 'finalizado') {
+        Array.from(selectedSeats).forEach(markSeatSold);
+        closePixModal();
+        checkoutMessage.textContent = 'Pagamento confirmado. Sua compra foi finalizada.';
+      }
+      if (status === 'expirado') {
+        closePixModal();
+        checkoutMessage.textContent = 'Reserva expirada. As poltronas ficaram disponiveis novamente.';
+      }
+    }
+
+    function subscribePayment(paymentId) {
+      if (paymentEvents) {
+        paymentEvents.close();
+      }
+      if (paymentStatusPoll) {
+        clearInterval(paymentStatusPoll);
+      }
+
+      paymentEvents = new EventSource(`/payments/${paymentId}/events`);
+      paymentEvents.addEventListener('payment-status', function(event) {
+        const data = JSON.parse(event.data);
+        handlePaymentStatus(data.status);
+      });
+
+      paymentStatusPoll = setInterval(async function() {
+        try {
+          const response = await fetch(`/payments/${paymentId}/status`, {
+            headers: { 'Accept': 'application/json' },
+          });
+          const result = await response.json();
+          if (response.ok && result.status === 'success') {
+            handlePaymentStatus(result.data.status);
+          }
+        } catch (error) {
+          // O SSE continua ativo; o polling e apenas um fallback para alteracoes feitas direto no banco.
+        }
+      }, 2000);
+    }
+
+    function subscribeSeats() {
+      const seatEvents = new EventSource(`/trips/${tripId}/seats/events`);
+      seatEvents.addEventListener('seat-status', function(event) {
+        const data = JSON.parse(event.data);
+        const action = data.status === 'available' ? markSeatAvailable : markSeatUnavailable;
+        (data.seats || []).forEach(action);
+      });
+    }
+
+    document.querySelectorAll('.seat-selection__seat').forEach((seatButton) => {
+      const status = seatButton.getAttribute('data-status');
+      if (status === 'mine') {
+        const seatNumber = Number(seatButton.getAttribute('data-seat'));
+        const expiresAt = seatButton.getAttribute('data-expires-at');
+        selectedSeats.add(seatNumber);
+        if (expiresAt) {
+          scheduleReservationExpiration(seatNumber, expiresAt);
+        }
+        updateSummary();
+      }
+
+      if (status === 'unavailable') {
+        return;
+      }
+
+      seatButton.addEventListener('click', async () => {
+        if (seatButton.getAttribute('data-status') === 'unavailable') {
+          return;
+        }
+        const seatNumber = Number(seatButton.getAttribute('data-seat'));
+        seatButton.disabled = true;
+        checkoutMessage.textContent = '';
+
+        try {
+          if (selectedSeats.has(seatNumber)) {
+            await fetch(`/trips/${tripId}/seats/release`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+              },
+              body: JSON.stringify({ seat: String(seatNumber) }),
+            });
+            selectedSeats.delete(seatNumber);
+            clearReservationTimer(seatNumber);
+            seatButton.classList.remove('seat-selection__seat--selected');
+            seatButton.setAttribute('data-status', 'available');
+          } else {
+            pendingReservations.add(seatNumber);
+            const response = await fetch(`/trips/${tripId}/seats/reserve`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+              },
+              body: JSON.stringify({ seat: String(seatNumber) }),
+            });
+            const result = await response.json();
+            if (!response.ok || result.status !== 'success') {
+              throw new Error(result.message || 'Nao foi possivel reservar a poltrona.');
+            }
+            selectedSeats.add(seatNumber);
+            seatButton.classList.add('seat-selection__seat--selected');
+            seatButton.classList.remove('seat-selection__seat--unavailable');
+            seatButton.setAttribute('data-status', 'mine');
+            scheduleReservationExpiration(seatNumber, result.data.expiresAt);
+          }
+        } catch (error) {
+          checkoutMessage.textContent = error.message || 'Nao foi possivel reservar a poltrona.';
+        } finally {
+          pendingReservations.delete(seatNumber);
+          seatButton.disabled = false;
+          updateSummary();
+        }
+      });
+    });
+
+    checkoutButton.addEventListener('click', async () => {
+      checkoutButton.disabled = true;
+      checkoutMessage.textContent = 'Criando pagamento PIX...';
+
+      try {
+        const response = await fetch(`/trips/${tripId}/checkout`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          body: JSON.stringify({
+            seats: Array.from(selectedSeats).map(String),
+          }),
+        });
+        const result = await response.json();
+
+        if (!response.ok || result.status !== 'success') {
+          throw new Error(result.message || 'Nao foi possivel iniciar o pagamento.');
+        }
+
+        checkoutMessage.textContent = '';
+        Array.from(selectedSeats).forEach(markSeatSold);
+        openPixModal(result.data);
+      } catch (error) {
+        checkoutMessage.textContent = error.message || 'Nao foi possivel iniciar o pagamento.';
+        updateSummary();
+      }
+    });
+
+    pixCloseButton.addEventListener('click', closePixModal);
+    subscribeSeats();
+  })();
+</script>

@@ -6,7 +6,7 @@
 * License: https://creativecommons.org/licenses/by/3.0/
 */ -->
 <!doctype html>
-<html lang="en">
+<html lang="pt-BR">
 <head>
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
@@ -16,21 +16,16 @@
 	<meta name="description" content="" />
 	<meta name="keywords" content="bootstrap, bootstrap4" />
 
-	<!-- Bootstrap CSS -->
 	<link href="/css/bootstrap.min.css" rel="stylesheet">
 	<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
 	<link href="/css/tiny-slider.css" rel="stylesheet">
 	<link href="/css/style.css" rel="stylesheet">
 	<title>Eucator - Login</title>
-
-	<style>
-
-	</style>
 </head>
 	<body>
-		<form action="/auth/login" method="POST" class="min-vh-100 d-flex flex-column align-items-center justify-content-center">
-			<div class="container w-25 p-5 border rounded shadow bg-white d-flex flex-column gap-3">
-				<label class="h2 text-center">Entrar</label>
+		<form action="/auth/login" method="POST" class="auth-page">
+			<div class="auth-card d-flex flex-column gap-3">
+				<label class="auth-card__title">Entrar</label>
 				<div class="form-group w-100">
 					<label for="email">Email:</label>
 					<input type="email" class="form-control w-100" id="email" name="email" required>
@@ -40,10 +35,10 @@
 					<input type="password" class="form-control w-100" id="password" name="password" required>
 				</div>
 				<button type="submit" class="btn btn-primary align-self-center mt-4 w-100">Entrar</button>
-				<a href="/user/create" class="align-self-center mt-2">Não possui conta? Cadastre-se.</a>
+				<a href="/user/create" class="auth-card__link">Nao possui conta? Cadastre-se.</a>
 			</div>
 
-			<div id="login-error" class="alert alert-danger mt-3 w-25 align-self-center <%= error ? '' : 'd-none' %>" role="alert">
+			<div id="login-error" class="alert alert-danger mt-3 auth-alert <%= error ? '' : 'd-none' %>" role="alert">
 				<%= error || '' %>
 			</div>
 		</form>
@@ -97,5 +92,4 @@
 			})();
 		</script>
 	</body>
-
 </html>

@@ -1,0 +1,93 @@
+<section class="profile-page">
+  <% const profileTickets = typeof tickets !== 'undefined' ? tickets : []; %>
+  <div class="container profile-page__wrap">
+    <div class="profile-page__header">
+      <div>
+        <p class="profile-page__subtitle">Minha conta</p>
+        <h1 class="profile-page__title">Perfil do usuario</h1>
+      </div>
+
+      <% if (!client) { %>
+        <a href="/client" class="profile-page__action">Completar cadastro</a>
+      <% } %>
+    </div>
+
+    <div class="profile-page__content">
+      <section class="profile-panel">
+        <h2>Dados de acesso</h2>
+        <dl class="profile-details">
+          <div>
+            <dt>E-mail</dt>
+            <dd><%= user.email %></dd>
+          </div>
+        </dl>
+      </section>
+
+      <section class="profile-panel">
+        <h2>Dados do cliente</h2>
+
+        <% if (client) { %>
+          <dl class="profile-details">
+            <div>
+              <dt>Nome</dt>
+              <dd><%= client.nome %></dd>
+            </div>
+            <div>
+              <dt>CPF</dt>
+              <dd><%= client.cpf %></dd>
+            </div>
+            <div>
+              <dt>Telefone</dt>
+              <dd><%= client.telefone %></dd>
+            </div>
+          </dl>
+        <% } else { %>
+          <div class="profile-empty">
+            <i class="fa-solid fa-id-card"></i>
+            <p>Complete seus dados de cliente para comprar passagens.</p>
+            <a href="/client" class="profile-empty__button">Completar cadastro</a>
+          </div>
+        <% } %>
+      </section>
+    </div>
+
+    <section class="profile-panel profile-panel--wide">
+      <h2>Minhas compras</h2>
+
+      <% if (profileTickets.length) { %>
+        <div class="profile-tickets">
+          <% profileTickets.forEach(ticket => { %>
+            <% const payment = ticket.sale && ticket.sale.payments && ticket.sale.payments.length ? ticket.sale.payments[0] : null; %>
+            <article class="profile-ticket">
+              <div class="profile-ticket__route">
+                <strong>
+                  <%= ticket.trip.route.cidadeOrigem.nome %> - <%= ticket.trip.route.cidadeOrigem.uf %>
+                  para
+                  <%= ticket.trip.route.cidadeDestino.nome %> - <%= ticket.trip.route.cidadeDestino.uf %>
+                </strong>
+                <span>Saida <%= dateFormatDayMonth(ticket.trip.dtHoraSaida) %> as <%= timeFormat(ticket.trip.dtHoraSaida) %></span>
+              </div>
+
+              <div class="profile-ticket__meta">
+                <span>Poltrona <strong><%= ticket.seat.numero %></strong></span>
+                <span>Passagem <strong>#<%= ticket.id %></strong></span>
+                <span>Status <strong><%= ticket.status %></strong></span>
+                <span>Pagamento <strong><%= payment ? payment.status : 'pendente' %></strong></span>
+              </div>
+
+              <a href="/user/tickets/<%= ticket.id %>/pdf" target="_blank" class="profile-ticket__print">
+                <i class="fa-solid fa-print"></i>
+                Imprimir
+              </a>
+            </article>
+          <% }) %>
+        </div>
+      <% } else { %>
+        <div class="profile-empty">
+          <i class="fa-solid fa-ticket"></i>
+          <p>Nenhuma compra encontrada.</p>
+        </div>
+      <% } %>
+    </section>
+  </div>
+</section>

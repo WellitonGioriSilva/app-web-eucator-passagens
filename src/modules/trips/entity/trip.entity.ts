@@ -1,5 +1,8 @@
+import { Bus } from "src/modules/bus/entity/bus.entity";
+import { DriverTrip } from "src/modules/driver-trip/entity/driver-trip.entity";
 import { Route } from "src/modules/route/entity/route.entity";
-import { BaseEntity, Column, Entity, ManyToOne, PrimaryGeneratedColumn, JoinColumn } from "typeorm";
+import { Ticket } from "src/modules/ticket/entity/ticket.entity";
+import { BaseEntity, Column, Entity, ManyToOne, OneToMany, PrimaryGeneratedColumn, JoinColumn } from "typeorm";
 
 @Entity("trips")
 export class Trip extends BaseEntity {
@@ -24,6 +27,10 @@ export class Trip extends BaseEntity {
     @Column({ type: "varchar", length: 255 })
     urlImagem!: string;
 
+    @ManyToOne(() => Bus, bus => bus.trips)
+    @JoinColumn({ name: "busId" })
+    bus!: Bus;
+
     @ManyToOne(() => Route, route => route.tripsIda)
     @JoinColumn({ name: "routeId" })
     route!: Route;
@@ -31,5 +38,11 @@ export class Trip extends BaseEntity {
     @ManyToOne(() => Route, route => route.tripsVolta, { nullable: true })
     @JoinColumn({ name: "routeVoltaId" })
     routeVolta?: Route | null;
+
+    @OneToMany(() => Ticket, ticket => ticket.trip)
+    tickets!: Ticket[];
+
+    @OneToMany(() => DriverTrip, driverTrip => driverTrip.trip)
+    driverTrips!: DriverTrip[];
     
 }

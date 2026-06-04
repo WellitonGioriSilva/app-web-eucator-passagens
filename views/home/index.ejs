@@ -1,5 +1,7 @@
 
 <% const filters = { cidadeOrigem: undefined, cidadeDestino: undefined, dataIda: undefined, dataVolta: undefined, tripTipo: undefined }; %>
+<% const homeCities = typeof cities !== 'undefined' ? cities : []; %>
+<% const homeTrips = typeof trips !== 'undefined' ? trips : []; %>
 <section class="trips-hero">
     <div class="container trips-hero__wrap">
         <form class="trips-hero__card" action="/trips" method="GET">
@@ -12,7 +14,7 @@
                 aria-label="Origem"
               >
                 <option value="">De onde você vai sair?</option>
-                <% cities.forEach(city => { %>
+                <% homeCities.forEach(city => { %>
                   <option value="<%= city.id %>" <%= String(filters.cidadeOrigem || '') === String(city.id) ? 'selected' : '' %>>
                     <%= city.nome %> - <%= city.uf %>
                   </option>
@@ -27,7 +29,7 @@
                 aria-label="Destino"
               >
                 <option value="">Para onde você vai?</option>
-                <% cities.forEach(city => { %>
+                <% homeCities.forEach(city => { %>
                   <option value="<%= city.id %>" <%= String(filters.cidadeDestino || '') === String(city.id) ? 'selected' : '' %>>
                     <%= city.nome %> - <%= city.uf %>
                   </option>
@@ -93,8 +95,8 @@
 
     <div class="trips-list__track-container">
       <ul class="trips-list__track" id="tripsTrack">
-        <% if (trips && trips.length) { %>
-          <% trips.forEach(trip => { %>
+        <% if (homeTrips.length) { %>
+          <% homeTrips.forEach(trip => { %>
             <li class="trips-list__card">
               <div class="trips-list__card-bg" style="background-image: url('<%= trip.urlImagem || '/img/default-city.jpg' %>')"></div>
               <div class="trips-list__card-overlay"></div>
@@ -106,7 +108,7 @@
                 <% if (trip.discount) { %>
                   <span class="trips-list__card-badge"><%= trip.discount %>% OFF</span>
                 <% } %>
-                <a href="/trips/<%= trip.id %>" class="trips-list__card-cta">Comprar</a>
+                <a href="/trips/<%= trip.id %>/seats" class="trips-list__card-cta">Comprar</a>
               </div>
             </li>
           <% }) %>

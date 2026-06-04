@@ -17,11 +17,11 @@ export class JwtAuthGuard implements CanActivate {
         const token = this.getToken(req);
 
         if (!token) {
-            if (res?.render) {
-                res.render("auth/login", { layout: false, error: "Sua autenticação expirou." });
+            if (this.acceptsHtml(req) && res?.redirect) {
+                res.redirect("/auth");
                 return false;
             }
-            throw new UnauthorizedException("Token ausente ou inválido.");
+            throw new UnauthorizedException("Token ausente ou invalido.");
         }
 
         try {
@@ -33,12 +33,17 @@ export class JwtAuthGuard implements CanActivate {
             (req as Request & { user: JwtPayload }).user = payload;
             return true;
         } catch {
-            if (res?.render) {
-                res.render("auth/login", { layout: false, error: "Sua autenticação expirou." });
+            if (this.acceptsHtml(req) && res?.redirect) {
+                res.redirect("/auth");
                 return false;
             }
-            throw new UnauthorizedException("Token inválido ou expirado.");
+            throw new UnauthorizedException("Token invalido ou expirado.");
         }
+    }
+
+    private acceptsHtml(req: Request): boolean {
+        const accept = req.headers.accept ?? "";
+        return accept.includes("text/html") || !accept.includes("application/json");
     }
 
     private getToken(req: Request): string | null {

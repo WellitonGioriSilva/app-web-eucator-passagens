@@ -33,11 +33,7 @@ export class ClientController {
             }
             await this.clientService.create(dto, userId);
             
-            res.render('/home/index', {
-                layout: true,
-                success: 'Registro realizado com sucesso',
-                error: null,
-            });
+            res.redirect('/');
             return;
         }
         catch (error: any) {

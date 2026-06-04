@@ -1,104 +1,90 @@
 import { Injectable } from "@nestjs/common";
-import type { FindOperator, FindOptionsWhere } from "typeorm";
-import { And, Between } from "typeorm";
-import type { City } from "src/modules/cities/entity/city.entity";
-import type { Route } from "src/modules/route/entity/route.entity";
 import { Trip } from "./entity/trip.entity";
+
+const HORARIO_RANGES: Record<string, { start: string; end: string }> = {
+    madrugada: { start: "00:00:00", end: "05:59:59" },
+    manha:     { start: "06:00:00", end: "11:59:59" },
+    tarde:     { start: "12:00:00", end: "17:59:59" },
+    noite:     { start: "18:00:00", end: "23:59:59" },
+};
 
 @Injectable()
 export class TripService {
+    async findById(id: number): Promise<Trip | null> {
+        return Trip.getRepository().findOne({
+            where: { id },
+            relations: {
+                bus: true,
+                route: { cidadeOrigem: true, cidadeDestino: true },
+                routeVolta: { cidadeOrigem: true, cidadeDestino: true },
+            },
+        });
+    }
+
     async getAll(
         cidadeOrigem?: number,
         cidadeDestino?: number,
         dataIda?: string,
         dataVolta?: string,
         tripTipo?: string,
-        horariosSaida?: string[]
+        horariosSaida?: string[],
+        ordenacao?: string
     ): Promise<Trip[]> {
-        const where: FindOptionsWhere<Trip> = {};
-
-        const horarioConditions: FindOperator<Date>[] = [];
-        for (const horario of horariosSaida || []) {
-            if (horario === "madrugada") {
-                horarioConditions.push(
-                    Between(
-                        new Date("1970-01-01T00:00:00"),
-                        new Date("1970-01-01T05:59:59")
-                    )
-                );
-            }
-            if (horario === "manha") {
-                horarioConditions.push(
-                    Between(
-                        new Date("1970-01-01T06:00:00"),
-                        new Date("1970-01-01T11:59:59")
-                    )
-                );
-            }
-            if (horario === "tarde") {
-                horarioConditions.push(
-                    Between(
-                        new Date("1970-01-01T12:00:00"),
-                        new Date("1970-01-01T17:59:59")
-                    )
-                );
-            }
-            if (horario === "noite") {
-                horarioConditions.push(
-                    Between(
-                        new Date("1970-01-01T18:00:00"),
-                        new Date("1970-01-01T23:59:59")
-                    )
-                );
-            }
-        }
+        const qb = Trip.getRepository()
+            .createQueryBuilder("trip")
+            .leftJoinAndSelect("trip.route", "route")
+            .leftJoinAndSelect("route.cidadeOrigem", "cidadeOrigem")
+            .leftJoinAndSelect("route.cidadeDestino", "cidadeDestino")
+            .leftJoinAndSelect("trip.routeVolta", "routeVolta")
+            .leftJoinAndSelect("routeVolta.cidadeOrigem", "cidadeOrigemVolta")
+            .leftJoinAndSelect("routeVolta.cidadeDestino", "cidadeDestinoVolta");
 
         if (dataIda) {
-            const diaRange = Between(
-                new Date(`${dataIda}T00:00:00`),
-                new Date(`${dataIda}T23:59:59`)
-            );
+            qb.andWhere("trip.dtHoraSaida BETWEEN :diaInicio AND :diaFim", {
+                diaInicio: `${dataIda} 00:00:00`,
+                diaFim:    `${dataIda} 23:59:59`,
+            });
+        }
 
-            where.dtHoraSaida =
-                horarioConditions.length > 0
-                    ? And(diaRange, ...horarioConditions)
-                    : diaRange;
-        } else if (horarioConditions.length > 0) {
-            where.dtHoraSaida =
-                horarioConditions.length === 1
-                    ? horarioConditions[0]
-                    : (horarioConditions as any);
+        const horarios = horariosSaida?.filter(h => HORARIO_RANGES[h]) ?? [];
+        if (horarios.length > 0) {
+            const clauses = horarios.map((_horario, i) =>
+                `TIME(trip.dtHoraSaida) BETWEEN :horStart${i} AND :horEnd${i}`
+            );
+            const params: Record<string, string> = {};
+            horarios.forEach((horario, i) => {
+                params[`horStart${i}`] = HORARIO_RANGES[horario].start;
+                params[`horEnd${i}`]   = HORARIO_RANGES[horario].end;
+            });
+
+            qb.andWhere(`(${clauses.join(" OR ")})`, params);
         }
 
         if (dataVolta) {
-            where.dtHoraSaidaVolta = Between(
-                new Date(`${dataVolta}T00:00:00`),
-                new Date(`${dataVolta}T23:59:59`)
-            );
+            qb.andWhere("trip.dtHoraSaidaVolta BETWEEN :voltaInicio AND :voltaFim", {
+                voltaInicio: `${dataVolta} 00:00:00`,
+                voltaFim:    `${dataVolta} 23:59:59`,
+            });
         }
 
         if (tripTipo) {
-            where.tipoViagem = tripTipo;
+            qb.andWhere("trip.tipoViagem = :tripTipo", { tripTipo });
         }
-
-        const routeWhere: FindOptionsWhere<Route> = {};
 
         if (cidadeOrigem) {
-            routeWhere.cidadeOrigem = { id: cidadeOrigem } as FindOptionsWhere<City>;
-        }
-        if (cidadeDestino) {
-            routeWhere.cidadeDestino = { id: cidadeDestino } as FindOptionsWhere<City>;
-        }
-        if (Object.keys(routeWhere).length > 0) {
-            where.route = routeWhere;
+            qb.andWhere("cidadeOrigem.id = :cidadeOrigem", { cidadeOrigem });
         }
 
-        return await Trip.find({
-            relations: {
-                route: { cidadeOrigem: true, cidadeDestino: true },
-                routeVolta: { cidadeOrigem: true, cidadeDestino: true },
-            },
-            where,
-        });
+        if (cidadeDestino) {
+            qb.andWhere("cidadeDestino.id = :cidadeDestino", { cidadeDestino });
+        }
+
+        if (ordenacao === "menorPreco") {
+            qb.orderBy("trip.valor", "ASC");
+        } else {
+            qb.orderBy("trip.dtHoraSaida", "ASC");
+        }
+
+        return qb.getMany();
     }
 }

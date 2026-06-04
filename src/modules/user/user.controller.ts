@@ -1,9 +1,10 @@
-import { BadRequestException, Body, Controller, Get, Post, Query, Render, Res } from "@nestjs/common";
-import type { Response } from "express";
+import { BadRequestException, Body, Controller, Get, Param, Post, Query, Render, Req, Res, UseGuards } from "@nestjs/common";
+import type { Request, Response } from "express";
 import { validateSync } from "class-validator";
 import { plainToInstance } from "class-transformer";
 import { UserService } from "../user/user.service";
 import { UserCreateDto } from "./dto/user.create.dto";
+import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 
 @Controller('user')
 export class UserController {
@@ -56,6 +57,37 @@ export class UserController {
     @Render('user/create')
     createRender(error: string, success: string): { layout: false, error?: string, success?: string } {
         return { layout: false, error, success }; 
+    }
+
+    @Get('profile')
+    @UseGuards(JwtAuthGuard)
+    async profile(@Req() req: Request, @Res() res: Response): Promise<void> {
+        const userId = (req as Request & { user?: { id: number } }).user?.id;
+        const user = userId ? await this.userService.findProfile(userId) : null;
+
+        if (!user) {
+            res.redirect('/auth');
+            return;
+        }
+        const tickets = await this.userService.findTicketsByUser(user.id);
+
+        res.render('user/profile', {
+            layout: true,
+            user,
+            client: user.client ?? null,
+            tickets,
+        });
+    }
+
+    @Get('tickets/:id/pdf')
+    @UseGuards(JwtAuthGuard)
+    async ticketPdf(@Param('id') id: string, @Req() req: Request, @Res() res: Response): Promise<void> {
+        const userId = (req as Request & { user?: { id: number } }).user?.id;
+        const pdf = await this.userService.generateTicketPdf(userId!, Number(id));
+
+        res.setHeader("Content-Type", "application/pdf");
+        res.setHeader("Content-Disposition", `inline; filename=passagem-${id}.pdf`);
+        res.send(pdf);
     }
 
 }

@@ -103,29 +103,18 @@
         </aside>
 
         <div class="trips-results__content">
-        <div class="trips-steps">
-          <div class="trips-steps__item trips-steps__item--active">
-            <i class="fa-solid fa-arrow-right"></i>
-            <span>Selecionar poltronas</span>
-          </div>
-          <div class="trips-steps__item">
-            <i class="fa-regular fa-credit-card"></i>
-            <span>Reserva</span>
-          </div>
-          <div class="trips-steps__item">
-            <i class="fa-solid fa-check"></i>
-            <span>Finalizado</span>
-          </div>
-        </div>
+
+        <input type="hidden" name="ordenacao" id="ordenacao" value="<%= filters.ordenacao || 'maisCedo' %>">
 
         <div class="trips-toolbar">
           <span class="trips-toolbar__label">Ordenar por</span>
           <div class="trips-toolbar__sorts">
-            <button type="button" class="trips-toolbar__sort trips-toolbar__sort--active">Mais cedo</button>
-            <button type="button" class="trips-toolbar__sort">Menor preço</button>
-            <button type="button" class="trips-toolbar__sort trips-toolbar__sort--more">
-              Mais opções <i class="fa-solid fa-chevron-down"></i>
-            </button>
+            <button type="button"
+              class="trips-toolbar__sort <%= !filters.ordenacao || filters.ordenacao === 'maisCedo' ? 'trips-toolbar__sort--active' : '' %>"
+              onclick="setOrdenacao('maisCedo')">Mais cedo</button>
+            <button type="button"
+              class="trips-toolbar__sort <%= filters.ordenacao === 'menorPreco' ? 'trips-toolbar__sort--active' : '' %>"
+              onclick="setOrdenacao('menorPreco')">Menor preço</button>
           </div>
         </div>
 
@@ -176,7 +165,7 @@
                     <strong class="trip-price-option__highlight"><%= currencyFormat(discountPrice) %></strong>
                   </div>
 
-                  <a href="/trips/<%= trip.id %>" class="trip-result-card__btn">Selecionar</a>
+                  <a href="/trips/<%= trip.id %>/seats" class="trip-result-card__btn">Selecionar</a>
                 </div>
               </article>
             <% }) %>
@@ -192,3 +181,10 @@
     </section>
   </form>
 </section>
+
+<script>
+  function setOrdenacao(valor) {
+    document.getElementById('ordenacao').value = valor;
+    document.querySelector('.trips-page form').submit();
+  }
+</script>
