@@ -22,6 +22,7 @@
 	<link href="/css/tiny-slider.css" rel="stylesheet">
 	<link href="/css/style.css" rel="stylesheet">
 	<title>Eucator - Cadastro</title>
+	<link rel="icon" type="image/png" href="/images/favicon.png">
 
 	<style>
 
@@ -29,7 +30,7 @@
 </head>
 	<body>
 		<form action="/client/create" method="POST" class="min-vh-100 d-flex flex-column align-items-center justify-content-center">
-			<div class="container w-25 p-5 border rounded shadow bg-white d-flex flex-column gap-3">
+			<div class="container w-50 p-5 border rounded shadow bg-white d-flex flex-column gap-3">
 				<label class="h2 text-center">Finalize o cadastro</label>
 				<input type="hidden" id="jwt" name="token">
 				<div class="form-group w-100">
@@ -42,7 +43,16 @@
 				</div>
 				<div class="form-group w-100">
 					<label for="telefone">Telefone:</label>
-					<input type="text" class="form-control w-100" id="telefone" name="telefone" required>
+					<input type="text" class="form-control w-100" id="telefone" name="telefone" required minlength="15" maxlength="15">
+				</div>
+				<div class="row g-3">
+					<div class="col-md-4"><label for="cep">CEP:</label><input type="text" class="form-control" id="cep" name="cep" required minlength="8" maxlength="8"></div>
+					<div class="col-md-8"><label for="logradouro">Logradouro:</label><input type="text" class="form-control" id="logradouro" name="logradouro" required maxlength="150"></div>
+					<div class="col-md-4"><label for="numero">Numero:</label><input type="text" class="form-control" id="numero" name="numero" required maxlength="20"></div>
+					<div class="col-md-8"><label for="complemento">Complemento:</label><input type="text" class="form-control" id="complemento" name="complemento" maxlength="100"></div>
+					<div class="col-md-5"><label for="bairro">Bairro:</label><input type="text" class="form-control" id="bairro" name="bairro" required maxlength="100"></div>
+					<div class="col-md-5"><label for="cidade">Cidade:</label><input type="text" class="form-control" id="cidade" name="cidade" required maxlength="100"></div>
+					<div class="col-md-2"><label for="estado">UF:</label><input type="text" class="form-control text-uppercase" id="estado" name="estado" required minlength="2" maxlength="2"></div>
 				</div>
 				<button type="submit" class="btn btn-primary align-self-center mt-4 w-100">Cadastrar</button>
 			</div>

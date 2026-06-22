@@ -9,6 +9,8 @@ DELETE FROM tickets;
 DELETE FROM payments;
 DELETE FROM sales;
 DELETE FROM seats;
+DELETE FROM promotions;
+DELETE FROM newsletter_subscribers;
 DELETE FROM trips;
 DELETE FROM drivers;
 DELETE FROM buses;
@@ -19,6 +21,8 @@ ALTER TABLE cities AUTO_INCREMENT = 1;
 ALTER TABLE routes AUTO_INCREMENT = 1;
 ALTER TABLE buses AUTO_INCREMENT = 1;
 ALTER TABLE trips AUTO_INCREMENT = 1;
+ALTER TABLE promotions AUTO_INCREMENT = 1;
+ALTER TABLE newsletter_subscribers AUTO_INCREMENT = 1;
 ALTER TABLE seats AUTO_INCREMENT = 1;
 ALTER TABLE drivers AUTO_INCREMENT = 1;
 ALTER TABLE driver_trips AUTO_INCREMENT = 1;
@@ -79,6 +83,20 @@ VALUES
 ('2026-06-13 17:00:00', NULL, '02:20:00', 140.00, 'I', 3, 5, NULL, 'https://picsum.photos/seed/cidade8/800/600'),
 ('2026-06-14 05:50:00', '2026-06-21 09:25:00', '01:39:00', 99.99, 'IV', 4, 5, 5, 'https://picsum.photos/seed/cidade9/800/600'),
 ('2026-06-14 18:30:00', NULL, '02:40:00', 160.80, 'I', 5, 6, NULL, 'https://picsum.photos/seed/cidade10/800/600');
+
+INSERT INTO trips
+(dtHoraSaida, dtHoraSaidaVolta, duracao, valor, tipoViagem, busId, routeId, routeVoltaId, urlImagem)
+VALUES
+('2026-07-05 08:00:00', NULL, '06:00:00', 120.00, 'I', 1, 1, NULL, 'https://picsum.photos/seed/oferta1/800/600'),
+('2026-07-12 09:00:00', NULL, '05:30:00', 150.00, 'I', 2, 2, NULL, 'https://picsum.photos/seed/oferta2/800/600'),
+('2026-08-02 10:00:00', NULL, '08:00:00', 180.00, 'I', 3, 3, NULL, 'https://picsum.photos/seed/oferta3/800/600');
+
+INSERT INTO promotions
+(nome, percentualDesconto, dataInicio, dataFim, ativa, tripId)
+VALUES
+('Ferias de julho', 20.00, '2026-06-01 00:00:00', '2026-07-05 07:59:59', 1, 11),
+('Oferta Sudeste', 15.00, '2026-06-01 00:00:00', '2026-07-12 08:59:59', 1, 12),
+('Agosto economico', 25.00, '2026-06-01 00:00:00', '2026-08-02 09:59:59', 1, 13);
 
 INSERT INTO seats (numero, tipo, busId) VALUES
 ('01', 'Convencional', 1), ('02', 'Convencional', 1), ('03', 'Convencional', 1), ('04', 'Convencional', 1),

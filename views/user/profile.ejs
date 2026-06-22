@@ -12,44 +12,56 @@
       <% } %>
     </div>
 
-    <div class="profile-page__content">
-      <section class="profile-panel">
-        <h2>Dados de acesso</h2>
-        <dl class="profile-details">
-          <div>
-            <dt>E-mail</dt>
-            <dd><%= user.email %></dd>
-          </div>
-        </dl>
-      </section>
+    <% if (client) { %>
+      <% if (typeof query !== 'undefined' && query.updated) { %>
+        <p class="profile-form__success">Dados atualizados com sucesso.</p>
+      <% } %>
 
-      <section class="profile-panel">
-        <h2>Dados do cliente</h2>
+      <form action="/user/profile" method="post" class="profile-account-form">
+        <div class="profile-page__content">
+          <section class="profile-panel profile-panel--wide profile-panel--personal">
+            <div class="profile-panel__heading">
+              <i class="fa-solid fa-user"></i>
+              <h2>Dados pessoais</h2>
+            </div>
+            <div class="profile-form profile-form--personal">
+              <label><span>Nome</span><input name="nome" value="<%= client.nome %>" required minlength="2"></label>
+              <label><span>E-mail</span><input type="email" name="email" value="<%= user.email %>" required></label>
+              <label><span>CPF</span><input name="cpf" value="<%= client.cpf %>" required minlength="14" maxlength="14"></label>
+              <label><span>Telefone</span><input name="telefone" value="<%= client.telefone %>" required minlength="15" maxlength="15"></label>
+            </div>
+          </section>
 
-        <% if (client) { %>
-          <dl class="profile-details">
-            <div>
-              <dt>Nome</dt>
-              <dd><%= client.nome %></dd>
+          <section class="profile-panel profile-panel--wide profile-panel--address">
+            <div class="profile-panel__heading">
+              <i class="fa-solid fa-location-dot"></i>
+              <h2>Endereco</h2>
             </div>
-            <div>
-              <dt>CPF</dt>
-              <dd><%= client.cpf %></dd>
+            <div class="profile-form profile-form--address">
+              <label class="profile-form__field--cep"><span>CEP</span><input name="cep" value="<%= client.cep || '' %>" required minlength="8" maxlength="8"></label>
+              <label class="profile-form__field--city"><span>Cidade</span><input name="cidade" value="<%= client.cidade || '' %>" required maxlength="100"></label>
+              <label class="profile-form__field--state"><span>UF</span><input name="estado" value="<%= client.estado || '' %>" required minlength="2" maxlength="2" class="text-uppercase"></label>
+              <label class="profile-form__field--wide"><span>Logradouro</span><input name="logradouro" value="<%= client.logradouro || '' %>" required maxlength="150"></label>
+              <label class="profile-form__field--number"><span>Numero</span><input name="numero" value="<%= client.numero || '' %>" required maxlength="20"></label>
+              <label class="profile-form__field--complement"><span>Complemento</span><input name="complemento" value="<%= client.complemento || '' %>" maxlength="100"></label>
+              <label class="profile-form__field--wide"><span>Bairro</span><input name="bairro" value="<%= client.bairro || '' %>" required maxlength="100"></label>
             </div>
-            <div>
-              <dt>Telefone</dt>
-              <dd><%= client.telefone %></dd>
-            </div>
-          </dl>
-        <% } else { %>
-          <div class="profile-empty">
-            <i class="fa-solid fa-id-card"></i>
-            <p>Complete seus dados de cliente para comprar passagens.</p>
-            <a href="/client" class="profile-empty__button">Completar cadastro</a>
-          </div>
-        <% } %>
+          </section>
+        </div>
+
+        <div class="profile-account-form__actions">
+          <button type="submit"><i class="fa-solid fa-floppy-disk"></i> Salvar alteracoes</button>
+        </div>
+      </form>
+    <% } else { %>
+      <section class="profile-panel profile-panel--wide">
+        <div class="profile-empty">
+          <i class="fa-solid fa-id-card"></i>
+          <p>Complete seus dados de cliente para comprar passagens.</p>
+          <a href="/client" class="profile-empty__button">Completar cadastro</a>
+        </div>
       </section>
-    </div>
+    <% } %>
 
     <section class="profile-panel profile-panel--wide">
       <h2>Minhas compras</h2>

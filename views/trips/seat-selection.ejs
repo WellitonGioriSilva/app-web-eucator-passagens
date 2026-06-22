@@ -182,9 +182,9 @@
     function markSeatUnavailable(seatNumber) {
       const seatButton = document.querySelector(`.seat-selection__seat[data-seat="${seatNumber}"]`);
       if (!seatButton) return;
-      if (selectedSeats.has(Number(seatNumber)) || pendingReservations.has(Number(seatNumber))) return;
+      if (selectedSeats.has(String(seatNumber)) || pendingReservations.has(String(seatNumber))) return;
 
-      selectedSeats.delete(Number(seatNumber));
+      selectedSeats.delete(String(seatNumber));
       seatButton.classList.remove('seat-selection__seat--selected');
       seatButton.classList.add('seat-selection__seat--unavailable');
       seatButton.setAttribute('data-status', 'unavailable');
@@ -196,7 +196,7 @@
       const seatButton = document.querySelector(`.seat-selection__seat[data-seat="${seatNumber}"]`);
       if (!seatButton) return;
 
-      selectedSeats.delete(Number(seatNumber));
+      selectedSeats.delete(String(seatNumber));
       clearReservationTimer(seatNumber);
       seatButton.classList.remove('seat-selection__seat--selected');
       seatButton.classList.add('seat-selection__seat--unavailable');
@@ -216,10 +216,10 @@
     }
 
     function clearReservationTimer(seatNumber) {
-      const timer = reservationTimers.get(Number(seatNumber));
+      const timer = reservationTimers.get(String(seatNumber));
       if (timer) {
         clearTimeout(timer);
-        reservationTimers.delete(Number(seatNumber));
+        reservationTimers.delete(String(seatNumber));
       }
     }
 
@@ -228,14 +228,14 @@
       const delay = Math.max(new Date(expiresAt).getTime() - Date.now(), 0);
       const timer = setTimeout(() => {
         const seatButton = document.querySelector(`.seat-selection__seat[data-seat="${seatNumber}"]`);
-        selectedSeats.delete(Number(seatNumber));
+        selectedSeats.delete(String(seatNumber));
         seatButton?.classList.remove('seat-selection__seat--selected');
         seatButton?.setAttribute('data-status', 'available');
         checkoutMessage.textContent = `Reserva da poltrona ${seatNumber} expirada.`;
         updateSummary();
         clearReservationTimer(seatNumber);
       }, delay);
-      reservationTimers.set(Number(seatNumber), timer);
+      reservationTimers.set(String(seatNumber), timer);
     }
 
     function openPixModal(payment) {
@@ -317,7 +317,7 @@
     document.querySelectorAll('.seat-selection__seat').forEach((seatButton) => {
       const status = seatButton.getAttribute('data-status');
       if (status === 'mine') {
-        const seatNumber = Number(seatButton.getAttribute('data-seat'));
+        const seatNumber = String(seatButton.getAttribute('data-seat'));
         const expiresAt = seatButton.getAttribute('data-expires-at');
         selectedSeats.add(seatNumber);
         if (expiresAt) {
@@ -334,7 +334,7 @@
         if (seatButton.getAttribute('data-status') === 'unavailable') {
           return;
         }
-        const seatNumber = Number(seatButton.getAttribute('data-seat'));
+        const seatNumber = String(seatButton.getAttribute('data-seat'));
         seatButton.disabled = true;
         checkoutMessage.textContent = '';
 

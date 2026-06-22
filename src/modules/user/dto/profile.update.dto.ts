@@ -1,7 +1,14 @@
-import { IsOptional, IsString, Length, MaxLength } from 'class-validator';
+import {
+  IsEmail,
+  IsOptional,
+  IsString,
+  Length,
+  MaxLength,
+} from 'class-validator';
 
-export class ClientCreateDto {
+export class ProfileUpdateDto {
   @IsString()
+  @Length(2, 255)
   nome!: string;
 
   @IsString()
@@ -11,6 +18,9 @@ export class ClientCreateDto {
   @IsString()
   @Length(15, 15)
   telefone!: string;
+
+  @IsEmail()
+  email!: string;
 
   @IsString()
   @Length(8, 8)

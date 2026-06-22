@@ -281,6 +281,13 @@ body {
   opacity: 0.95;
 }
 
+.trips-list__card-old-price {
+  margin: 0;
+  font-size: 0.8rem;
+  text-decoration: line-through;
+  opacity: 0.8;
+}
+
 .trips-list__card-price {
   font-size: 1.6rem;
   font-weight: 800;
@@ -2132,6 +2139,7 @@ textarea {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 20px;
+  align-items: stretch;
 }
 
 .profile-panel {
@@ -2150,6 +2158,120 @@ textarea {
   font-size: 18px;
   font-weight: 700;
   margin-bottom: 18px;
+}
+
+.profile-account-form {
+  display: grid;
+  gap: 18px;
+}
+
+.profile-panel__heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #e5ece8;
+}
+
+.profile-panel__heading i {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 10px;
+  color: #1f915f;
+  background: #eef5f0;
+}
+
+.profile-panel__heading h2 {
+  margin: 0;
+}
+
+.profile-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.profile-form--personal {
+  grid-template-columns: 1fr;
+}
+
+.profile-form--address {
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+}
+
+.profile-form label {
+  display: grid;
+  gap: 6px;
+  color: #557267;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.profile-form input {
+  width: 100%;
+  border: 1px solid #d8e2dc;
+  border-radius: 10px;
+  padding: 11px 13px;
+  color: #1f2f29;
+  background: #fff;
+}
+
+.profile-form__field--wide {
+  grid-column: 1 / -1;
+}
+
+.profile-form__field--cep {
+  grid-column: span 4;
+}
+
+.profile-form__field--city {
+  grid-column: span 6;
+}
+
+.profile-form__field--state {
+  grid-column: span 2;
+}
+
+.profile-form__field--number {
+  grid-column: span 4;
+}
+
+.profile-form__field--complement {
+  grid-column: span 8;
+}
+
+.profile-account-form__actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.profile-account-form__actions button {
+  border: 0;
+  border-radius: 10px;
+  padding: 11px 20px;
+  color: #fff;
+  background: #1f915f;
+  font-weight: 700;
+}
+
+.profile-form__success,
+.site-footer__newsletter-success {
+  color: #176b49;
+  font-weight: 700;
+}
+
+@media (max-width: 600px) {
+  .profile-form,
+  .profile-form--address {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-form--address label {
+    grid-column: 1;
+  }
 }
 
 .profile-details {

@@ -1,11 +1,15 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
-import { Client } from "src/modules/client/entity/client.entity";
-import { Payment } from "src/modules/payment/entity/payment.entity";
-import { PaymentEventsService } from "src/modules/payment/payment-events.service";
-import { Sale } from "src/modules/sale/entity/sale.entity";
-import { Seat } from "src/modules/seat/entity/seat.entity";
-import { Ticket } from "src/modules/ticket/entity/ticket.entity";
-import { Trip } from "src/modules/trips/entity/trip.entity";
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { Client } from 'src/modules/client/entity/client.entity';
+import { Payment } from 'src/modules/payment/entity/payment.entity';
+import { PaymentEventsService } from 'src/modules/payment/payment-events.service';
+import { Sale } from 'src/modules/sale/entity/sale.entity';
+import { Seat } from 'src/modules/seat/entity/seat.entity';
+import { Ticket } from 'src/modules/ticket/entity/ticket.entity';
+import { Trip } from 'src/modules/trips/entity/trip.entity';
 
 const RESERVATION_MINUTES = 5;
 
@@ -16,15 +20,15 @@ export class PaymentService {
   async reserveSeat(userId: number, tripId: number, seatNumber: string) {
     const { trip, seat } = await this.findTripSeat(tripId, seatNumber);
     const existingTicket = await Ticket.getRepository()
-      .createQueryBuilder("ticket")
-      .leftJoinAndSelect("ticket.seat", "seat")
-      .where("ticket.tripId = :tripId", { tripId })
-      .andWhere("ticket.seatId = :seatId", { seatId: seat.id })
+      .createQueryBuilder('ticket')
+      .leftJoinAndSelect('ticket.seat', 'seat')
+      .where('ticket.tripId = :tripId', { tripId })
+      .andWhere('ticket.seatId = :seatId', { seatId: seat.id })
       .andWhere(
-        "(ticket.status = :soldStatus OR (ticket.status = :reservedStatus AND ticket.reservationExpiresAt > NOW()))",
+        '(ticket.status = :soldStatus OR (ticket.status = :reservedStatus AND ticket.reservationExpiresAt > NOW()))',
         {
-          soldStatus: "vendido",
-          reservedStatus: "reservado",
+          soldStatus: 'vendido',
+          reservedStatus: 'reservado',
         },
       )
       .getOne();
@@ -35,127 +39,166 @@ export class PaymentService {
 
     const reservationExpiresAt = this.getReservationExpiration();
     const ticket = existingTicket ?? Ticket.create({ trip, seat });
-    ticket.status = "reservado";
+    ticket.status = 'reservado';
     ticket.reservationExpiresAt = reservationExpiresAt;
     ticket.reservedByUserId = userId;
     await ticket.save();
 
     this.events.emitSeatStatus({
       tripId,
-      seats: [seatNumber],
-      status: "unavailable",
+      seats: [seat.numero],
+      status: 'unavailable',
     });
-    this.expireSeatReservationAfterDelay(ticket.id, tripId, seatNumber);
+    this.expireSeatReservationAfterDelay(ticket.id, tripId, seat.numero);
 
     return {
-      seat: seatNumber,
+      seat: seat.numero,
       expiresAt: reservationExpiresAt,
     };
   }
 
-  async releaseSeatReservation(userId: number, tripId: number, seatNumber: string) {
+  async releaseSeatReservation(
+    userId: number,
+    tripId: number,
+    seatNumber: string,
+  ) {
     const { seat } = await this.findTripSeat(tripId, seatNumber);
     await Ticket.getRepository()
       .createQueryBuilder()
       .update(Ticket)
-      .set({ status: "expirado", reservationExpiresAt: null })
-      .where("tripId = :tripId", { tripId })
-      .andWhere("seatId = :seatId", { seatId: seat.id })
-      .andWhere("reservedByUserId = :userId", { userId })
-      .andWhere("status = :status", { status: "reservado" })
-      .andWhere("saleId IS NULL")
+      .set({ status: 'expirado', reservationExpiresAt: null })
+      .where('tripId = :tripId', { tripId })
+      .andWhere('seatId = :seatId', { seatId: seat.id })
+      .andWhere('reservedByUserId = :userId', { userId })
+      .andWhere('status = :status', { status: 'reservado' })
+      .andWhere('saleId IS NULL')
       .execute();
 
     this.events.emitSeatStatus({
       tripId,
-      seats: [seatNumber],
-      status: "available",
+      seats: [seat.numero],
+      status: 'available',
     });
 
-    return { seat: seatNumber };
+    return { seat: seat.numero };
   }
 
-  async createPixPayment(userId: number, tripId: number, seatNumbers: string[]) {
+  async createPixPayment(
+    userId: number,
+    tripId: number,
+    seatNumbers: string[],
+  ) {
     if (!seatNumbers.length) {
-      throw new BadRequestException("Selecione ao menos uma poltrona.");
+      throw new BadRequestException('Selecione ao menos uma poltrona.');
     }
 
     const client = await Client.findOneBy({ userId });
     if (!client) {
-      throw new BadRequestException("Complete seu cadastro de cliente antes de comprar.");
+      throw new BadRequestException(
+        'Complete seu cadastro de cliente antes de comprar.',
+      );
     }
 
     const trip = await Trip.getRepository().findOne({
       where: { id: tripId },
-      relations: { bus: true },
+      relations: { bus: true, promotions: true },
     });
     if (!trip?.bus) {
-      throw new NotFoundException("Viagem nao encontrada.");
+      throw new NotFoundException('Viagem nao encontrada.');
     }
 
     const uniqueSeatNumbers = Array.from(new Set(seatNumbers.map(String)));
-    const seats = await Seat.getRepository()
-      .createQueryBuilder("seat")
-      .where("seat.busId = :busId", { busId: trip.bus.id })
-      .andWhere("seat.numero IN (:...seatNumbers)", { seatNumbers: uniqueSeatNumbers })
+    const requestedSeatNumbers = new Set(
+      uniqueSeatNumbers.map((number) => this.normalizeSeatNumber(number)),
+    );
+    const busSeats = await Seat.getRepository()
+      .createQueryBuilder('seat')
+      .where('seat.busId = :busId', { busId: trip.bus.id })
       .getMany();
+    const seats = busSeats.filter((seat) =>
+      requestedSeatNumbers.has(this.normalizeSeatNumber(seat.numero)),
+    );
 
-    if (seats.length !== uniqueSeatNumbers.length) {
-      throw new BadRequestException("Uma ou mais poltronas nao foram encontradas.");
+    if (seats.length !== requestedSeatNumbers.size) {
+      throw new BadRequestException(
+        'Uma ou mais poltronas nao foram encontradas.',
+      );
     }
 
-    const seatIds = seats.map(seat => seat.id);
+    const seatIds = seats.map((seat) => seat.id);
     const unavailableSeats = await Ticket.getRepository()
-      .createQueryBuilder("ticket")
-      .leftJoinAndSelect("ticket.seat", "seat")
-      .where("ticket.tripId = :tripId", { tripId })
-      .andWhere("ticket.seatId IN (:...seatIds)", { seatIds })
+      .createQueryBuilder('ticket')
+      .leftJoinAndSelect('ticket.seat', 'seat')
+      .where('ticket.tripId = :tripId', { tripId })
+      .andWhere('ticket.seatId IN (:...seatIds)', { seatIds })
       .andWhere(
-        "(ticket.status = :soldStatus OR (ticket.status = :reservedStatus AND ticket.reservationExpiresAt > NOW() AND (ticket.reservedByUserId IS NULL OR ticket.reservedByUserId != :userId)))",
+        '(ticket.status = :soldStatus OR (ticket.status = :reservedStatus AND ticket.reservationExpiresAt > NOW() AND (ticket.reservedByUserId IS NULL OR ticket.reservedByUserId != :userId)))',
         {
-          soldStatus: "vendido",
-          reservedStatus: "reservado",
+          soldStatus: 'vendido',
+          reservedStatus: 'reservado',
           userId,
         },
       )
       .getMany();
 
     if (unavailableSeats.length) {
-      const numbers = unavailableSeats.map(ticket => ticket.seat.numero).join(", ");
+      const numbers = unavailableSeats
+        .map((ticket) => ticket.seat.numero)
+        .join(', ');
       throw new BadRequestException(`Poltrona indisponivel: ${numbers}.`);
     }
 
-    const subTotal = Number(trip.valor ?? 0) * seats.length;
+    const now = Date.now();
+    const promotion = (trip.promotions ?? [])
+      .filter(
+        (item) =>
+          item.ativa &&
+          new Date(item.dataInicio).getTime() <= now &&
+          new Date(item.dataFim).getTime() >= now,
+      )
+      .sort(
+        (a, b) => Number(b.percentualDesconto) - Number(a.percentualDesconto),
+      )[0];
+    const discountPercentage = promotion
+      ? Number(promotion.percentualDesconto)
+      : 0;
+    const originalTotal = Number(trip.valor ?? 0) * seats.length;
+    const discountAmount = (originalTotal * discountPercentage) / 100;
+    const subTotal = Number((originalTotal - discountAmount).toFixed(2));
     const reservationExpiresAt = this.getReservationExpiration();
     const sale = Sale.create({
       dataHora: new Date(),
-      desconto: 0,
+      desconto: discountAmount,
       subTotal,
-      status: "pendente",
+      status: 'pendente',
       client,
     });
     await sale.save();
 
     const tickets = await Ticket.getRepository()
-      .createQueryBuilder("ticket")
-      .leftJoinAndSelect("ticket.seat", "seat")
-      .where("ticket.tripId = :tripId", { tripId })
-      .andWhere("ticket.seatId IN (:...seatIds)", { seatIds })
-      .andWhere("ticket.reservedByUserId = :userId", { userId })
-      .andWhere("ticket.status = :status", { status: "reservado" })
-      .andWhere("ticket.reservationExpiresAt > NOW()")
+      .createQueryBuilder('ticket')
+      .leftJoinAndSelect('ticket.seat', 'seat')
+      .where('ticket.tripId = :tripId', { tripId })
+      .andWhere('ticket.seatId IN (:...seatIds)', { seatIds })
+      .andWhere('ticket.reservedByUserId = :userId', { userId })
+      .andWhere('ticket.status = :status', { status: 'reservado' })
+      .andWhere('ticket.reservationExpiresAt > NOW()')
       .getMany();
-    const ticketsBySeatId = new Map(tickets.map(ticket => [ticket.seat.id, ticket]));
+    const ticketsBySeatId = new Map(
+      tickets.map((ticket) => [ticket.seat.id, ticket]),
+    );
 
     for (const seat of seats) {
-      const ticket = ticketsBySeatId.get(seat.id) ?? Ticket.create({
-        status: "reservado",
-        reservationExpiresAt,
-        reservedByUserId: userId,
-        trip,
-        seat,
-      });
-      ticket.status = "reservado";
+      const ticket =
+        ticketsBySeatId.get(seat.id) ??
+        Ticket.create({
+          status: 'reservado',
+          reservationExpiresAt,
+          reservedByUserId: userId,
+          trip,
+          seat,
+        });
+      ticket.status = 'reservado';
       ticket.reservationExpiresAt = reservationExpiresAt;
       ticket.reservedByUserId = userId;
       ticket.sale = sale;
@@ -163,9 +206,9 @@ export class PaymentService {
     }
 
     const payment = Payment.create({
-      tipo: "PIX",
+      tipo: 'PIX',
       valor: subTotal,
-      status: "pendente",
+      status: 'pendente',
       dataHoraPagamento: null,
       pixCopiaCola: this.buildPixPayload(sale.id, subTotal),
       sale,
@@ -174,10 +217,14 @@ export class PaymentService {
 
     this.events.emitSeatStatus({
       tripId,
-      seats: uniqueSeatNumbers,
-      status: "unavailable",
+      seats: seats.map((seat) => seat.numero),
+      status: 'unavailable',
     });
-    this.expireReservationAfterDelay(payment.id, tripId, uniqueSeatNumbers);
+    this.expireReservationAfterDelay(
+      payment.id,
+      tripId,
+      seats.map((seat) => seat.numero),
+    );
 
     return {
       paymentId: payment.id,
@@ -194,18 +241,24 @@ export class PaymentService {
       relations: { sale: true },
     });
     if (!payment) {
-      throw new NotFoundException("Pagamento nao encontrado.");
+      throw new NotFoundException('Pagamento nao encontrado.');
     }
 
     payment.status = status;
-    if (status === "finalizado") {
+    if (status === 'finalizado') {
       payment.dataHoraPagamento = new Date();
-      await Sale.getRepository().update(payment.sale.id, { status: "finalizada" });
+      await Sale.getRepository().update(payment.sale.id, {
+        status: 'finalizada',
+      });
       await Ticket.getRepository()
         .createQueryBuilder()
         .update(Ticket)
-        .set({ status: "vendido", reservationExpiresAt: null, reservedByUserId: null })
-        .where("saleId = :saleId", { saleId: payment.sale.id })
+        .set({
+          status: 'vendido',
+          reservationExpiresAt: null,
+          reservedByUserId: null,
+        })
+        .where('saleId = :saleId', { saleId: payment.sale.id })
         .execute();
     }
     await payment.save();
@@ -229,7 +282,7 @@ export class PaymentService {
       relations: { sale: true },
     });
     if (!payment) {
-      throw new NotFoundException("Pagamento nao encontrado.");
+      throw new NotFoundException('Pagamento nao encontrado.');
     }
 
     return {
@@ -249,85 +302,109 @@ export class PaymentService {
       relations: { bus: true },
     });
     if (!trip?.bus) {
-      throw new NotFoundException("Viagem nao encontrada.");
+      throw new NotFoundException('Viagem nao encontrada.');
     }
 
-    const seat = await Seat.getRepository()
-      .createQueryBuilder("seat")
-      .where("seat.busId = :busId", { busId: trip.bus.id })
-      .andWhere("seat.numero = :seatNumber", { seatNumber })
-      .getOne();
+    const normalizedSeatNumber = this.normalizeSeatNumber(seatNumber);
+    const seats = await Seat.getRepository()
+      .createQueryBuilder('seat')
+      .where('seat.busId = :busId', { busId: trip.bus.id })
+      .getMany();
+    const seat = seats.find(
+      (item) => this.normalizeSeatNumber(item.numero) === normalizedSeatNumber,
+    );
     if (!seat) {
-      throw new NotFoundException("Poltrona nao encontrada.");
+      throw new NotFoundException('Poltrona nao encontrada.');
     }
 
     return { trip, seat };
   }
 
-  private expireSeatReservationAfterDelay(ticketId: number, tripId: number, seatNumber: string): void {
-    const timer = setTimeout(async () => {
-      const ticket = await Ticket.getRepository().findOne({
-        where: { id: ticketId },
-        relations: { sale: true },
-      });
+  private normalizeSeatNumber(value: string): string {
+    const numericValue = Number(value);
+    return Number.isNaN(numericValue) ? value.trim() : String(numericValue);
+  }
 
-      if (
-        !ticket ||
-        ticket.sale ||
-        ticket.status !== "reservado" ||
-        !ticket.reservationExpiresAt ||
-        ticket.reservationExpiresAt > new Date()
-      ) {
-        return;
-      }
+  private expireSeatReservationAfterDelay(
+    ticketId: number,
+    tripId: number,
+    seatNumber: string,
+  ): void {
+    const timer = setTimeout(
+      async () => {
+        const ticket = await Ticket.getRepository().findOne({
+          where: { id: ticketId },
+          relations: { sale: true },
+        });
 
-      ticket.status = "expirado";
-      ticket.reservationExpiresAt = null;
-      await ticket.save();
+        if (
+          !ticket ||
+          ticket.sale ||
+          ticket.status !== 'reservado' ||
+          !ticket.reservationExpiresAt ||
+          ticket.reservationExpiresAt > new Date()
+        ) {
+          return;
+        }
 
-      this.events.emitSeatStatus({
-        tripId,
-        seats: [seatNumber],
-        status: "available",
-      });
-    }, RESERVATION_MINUTES * 60 * 1000);
+        ticket.status = 'expirado';
+        ticket.reservationExpiresAt = null;
+        await ticket.save();
+
+        this.events.emitSeatStatus({
+          tripId,
+          seats: [seatNumber],
+          status: 'available',
+        });
+      },
+      RESERVATION_MINUTES * 60 * 1000,
+    );
 
     timer.unref?.();
   }
 
-  private expireReservationAfterDelay(paymentId: number, tripId: number, seats: string[]): void {
-    const timer = setTimeout(async () => {
-      const payment = await Payment.getRepository().findOne({
-        where: { id: paymentId },
-        relations: { sale: true },
-      });
+  private expireReservationAfterDelay(
+    paymentId: number,
+    tripId: number,
+    seats: string[],
+  ): void {
+    const timer = setTimeout(
+      async () => {
+        const payment = await Payment.getRepository().findOne({
+          where: { id: paymentId },
+          relations: { sale: true },
+        });
 
-      if (!payment || payment.status !== "pendente") {
-        return;
-      }
+        if (!payment || payment.status !== 'pendente') {
+          return;
+        }
 
-      payment.status = "expirado";
-      await payment.save();
-      await Sale.getRepository().update(payment.sale.id, { status: "expirada" });
-      await Ticket.getRepository()
-        .createQueryBuilder()
-        .update(Ticket)
-        .set({ status: "expirado" })
-        .where("saleId = :saleId", { saleId: payment.sale.id })
-        .andWhere("status = :status", { status: "reservado" })
-        .execute();
+        payment.status = 'expirado';
+        await payment.save();
+        await Sale.getRepository().update(payment.sale.id, {
+          status: 'expirada',
+        });
+        await Ticket.getRepository()
+          .createQueryBuilder()
+          .update(Ticket)
+          .set({ status: 'expirado' })
+          .where('saleId = :saleId', { saleId: payment.sale.id })
+          .andWhere('status = :status', { status: 'reservado' })
+          .execute();
 
-      this.events.emitPaymentStatus({
-        paymentId: payment.id,
-        saleId: payment.sale.id,
-        status: payment.status,
-      });
-      this.events.emitSeatStatus({
-        tripId,
-        seats,
-        status: "available",
-      });
-    }, RESERVATION_MINUTES * 60 * 1000);
+        this.events.emitPaymentStatus({
+          paymentId: payment.id,
+          saleId: payment.sale.id,
+          status: payment.status,
+        });
+        this.events.emitSeatStatus({
+          tripId,
+          seats,
+          status: 'available',
+        });
+      },
+      RESERVATION_MINUTES * 60 * 1000,
+    );
 
     timer.unref?.();
   }

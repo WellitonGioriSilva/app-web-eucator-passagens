@@ -101,10 +101,13 @@
               <div class="trips-list__card-bg" style="background-image: url('<%= trip.urlImagem || '/img/default-city.jpg' %>')"></div>
               <div class="trips-list__card-overlay"></div>
               <div class="trips-list__card-content">
-                <p class="trips-list__card-origin">De <strong><%= trip.route.cidadeOrigem.nome %> - <%= trip.route.cidadeOrigem.uf %></strong></p>
+                <p class="trips-list__card-origin" style="margin-bottom: 15px;">De <strong><%= trip.route.cidadeOrigem.nome %> - <%= trip.route.cidadeOrigem.uf %></strong></p>
                 <p class="trips-list__card-destination">Para <strong><%= trip.route.cidadeDestino.nome %> - <%= trip.route.cidadeDestino.uf %></strong></p>
+                <% if (trip.activePromotion) { %>
+                  <p class="trips-list__card-old-price"><%= currencyFormat(trip.valor) %></p>
+                <% } %>
                 <p class="trips-list__card-from">Por apenas</p>
-                <p class="trips-list__card-price"><%= currencyFormat(trip.valor) %></p>
+                <p class="trips-list__card-price"><%= currencyFormat(trip.promotionalValue ?? trip.valor) %></p>
                 <% if (trip.discount) { %>
                   <span class="trips-list__card-badge"><%= trip.discount %>% OFF</span>
                 <% } %>
@@ -127,7 +130,7 @@
 </section>
 
 <footer class="site-footer">
-  <div class="site-footer__newsletter">
+  <div class="site-footer__newsletter" id="newsletter">
     <div class="container site-footer__newsletter-wrap">
       <div class="site-footer__newsletter-text">
         <h3>Receba ofertas no seu e-mail</h3>
@@ -135,15 +138,10 @@
       </div>
 
       <form class="site-footer__newsletter-form" action="/newsletter" method="post">
-        <input type="text" name="nome" placeholder="Nome" aria-label="Nome">
-        <input type="email" name="email" placeholder="E-mail" aria-label="E-mail">
+        <input type="text" name="nome" placeholder="Nome" aria-label="Nome" required minlength="2">
+        <input type="email" name="email" placeholder="E-mail" aria-label="E-mail" required>
         <button type="submit">Quero receber ofertas</button>
       </form>
-
-      <p class="site-footer__newsletter-note">
-        Ao assinar você concorda em receber e-mails promocionais. Veja a
-        <a href="/privacidade">política de privacidade</a>.
-      </p>
     </div>
   </div>
 
@@ -156,19 +154,17 @@
       <div class="site-footer__col">
         <h4>Serviços</h4>
         <ul>
-          <li><a href="/bilhetes">Imprimir bilhete</a></li>
-          <li><a href="/espaco-mulher">Espaco Mulher</a></li>
-          <li><a href="/espaco-pet">Espaco Pet</a></li>
+          <li><a href="/user/profile">Imprimir bilhete</a></li>
         </ul>
       </div>
 
       <div class="site-footer__col">
         <h4>Ajuda</h4>
         <ul>
-          <li><a href="/faq">Perguntas frequentes (FAQ)</a></li>
-          <li><a href="/contato">Fale conosco</a></li>
-          <li><a href="/termos">Termos de uso</a></li>
-          <li><a href="/privacidade">Politica de privacidade</a></li>
+          <li><a href="#">Perguntas frequentes (FAQ)</a></li>
+          <li><a href="#">Fale conosco</a></li>
+          <li><a href="#">Termos de uso</a></li>
+          <li><a href="#">Política de privacidade</a></li>
         </ul>
       </div>
 
